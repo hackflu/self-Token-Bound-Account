@@ -3,16 +3,18 @@ pragma solidity ^0.8.19;
 import {IERC6551Account} from "./interface/IERC6551Account.sol";
 import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
 import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
-import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
+import {
+    SignatureChecker
+} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import {IERC6551Executable} from "./interface/IERC6551Executable.sol";
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
-
-
-contract Account is IERC165, IERC1271 , IERC6551Account,IERC6551Executable{
+contract Account is IERC165, IERC1271, IERC6551Account, IERC6551Executable {
     uint256 public state;
-    receive() external payable{}
+    uint256 deploymentChainId = block.chainid;
 
-    function isValidSignature(bytes32 hash, bytes calldata signature) external view returns (bytes4 magicValue){}
+    receive() external payable {}
+
     function token() public view virtual returns (uint256, address, uint256) {
         bytes memory footer = new bytes(0x60);
 
@@ -29,13 +31,23 @@ contract Account is IERC165, IERC1271 , IERC6551Account,IERC6551Executable{
 
         return IERC721(tokenContract).ownerOf(tokenId);
     }
+    
+    function isValidSigner(address signer, bytes calldata) external view virtual returns (bytes4) {
+        if (_isValidSigner(signer)) {
+            return IERC6551Account.isValidSigner.selector;
+        }
 
-
-    function isValidSigner(address signer, bytes calldata context)
-        external
-        view
-        returns (bytes4 magicValue){
-            bool isValid = SignatureChecker.isValidSignatureNow(owner(), hash, signature);
+        return bytes4(0);
+    }
+    function isValidSignature(
+        bytes32 hash,
+        bytes calldata signature
+    ) external view returns (bytes4 magicValue) {
+        bool isValid = SignatureChecker.isValidSignatureNow(
+            owner(),
+            hash,
+            signature
+        );
 
         if (isValid) {
             return IERC1271.isValidSignature.selector;
@@ -44,18 +56,22 @@ contract Account is IERC165, IERC1271 , IERC6551Account,IERC6551Executable{
         return bytes4(0);
     }
 
-    function supportsInterface(bytes4 interfaceId) external pure virtual returns (bool) {
-        return interfaceId == type(IERC165).interfaceId
-            || interfaceId == type(IERC6551Account).interfaceId
-            || interfaceId == type(IERC6551Executable).interfaceId;
+    function supportsInterface(
+        bytes4 interfaceId
+    ) external pure virtual returns (bool) {
+        return
+            interfaceId == type(IERC165).interfaceId ||
+            interfaceId == type(IERC6551Account).interfaceId ||
+            interfaceId == type(IERC6551Executable).interfaceId;
     }
 
-
-    function execute(address to, uint256 value, bytes calldata data, uint8 operation)
-        external
-        payable
-        returns (bytes memory result){
-            require(_isValidSigner(msg.sender), "Invalid signer");
+    function execute(
+        address to,
+        uint256 value,
+        bytes calldata data,
+        uint8 operation
+    ) external payable returns (bytes memory result) {
+        require(_isValidSigner(msg.sender), "Invalid signer");
         require(operation == 0, "Only call operations are supported");
 
         ++state;
@@ -70,9 +86,7 @@ contract Account is IERC165, IERC1271 , IERC6551Account,IERC6551Executable{
         }
     }
 
-
-    function _isValidSigner(address addr) internal  returns(bool){
+    function _isValidSigner(address addr) internal view  virtual returns (bool) {
         return (addr == msg.sender);
     }
-
 }
