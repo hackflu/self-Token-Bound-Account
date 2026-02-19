@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {IERC6551Registry} from "./interface/IERC6551Registry.sol";
-
+import {console} from "forge-std/console.sol";
 
 contract Registry is IERC6551Registry {
     // error
@@ -17,6 +17,8 @@ contract Registry is IERC6551Registry {
     ) external returns (address account){
         // 1. create the codeHash 
         bytes memory codeHash = _createAccount(implementation , chainId , tokenContract, tokenId);
+        console.log("memory length");
+        console.logBytes(codeHash);
         // 2 . CREATE2 is deterministic so it can predict the address before
         account = Create2.computeAddress(salt , keccak256(codeHash)); 
         // check the address is already deployed
@@ -32,10 +34,7 @@ contract Registry is IERC6551Registry {
             tokenContract,
             tokenId
         );
-
         return account;
-
-
     }
 
     function account(

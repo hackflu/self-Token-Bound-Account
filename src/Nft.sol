@@ -8,15 +8,17 @@ import {ERC721URIStorage} from "@openzeppelin/contracts/token/ERC721/extensions/
 
 contract Nft is ERC721 ,ERC721URIStorage,Ownable{
     //error
-    error erc721_NoUserWithTokenId(uint256);
+    error nft_UserAlreadyExist(uint256);
 
     constructor(address initalOwner) ERC721("Moto" , "MOTO") Ownable(initalOwner){}
 
-    function mint(address to , uint256 tokenId , string calldata tokenUri) public {
+    function mint(address to , uint256 tokenId , string calldata tokenUri) public onlyOwner{
         address owner = _ownerOf(tokenId);
-        if(owner == address(0)){
-            revert erc721_NoUserWithTokenId(tokenId);
+        if(owner != address(0)){
+            revert nft_UserAlreadyExist(tokenId);
         }
+        // _safeMint will revert if the tokenId already exists.
+        // Consider adding an `onlyOwner` modifier if minting should be restricted.
         _safeMint(to, tokenId);
         _setTokenURI(tokenId , tokenUri);
         emit Transfer(msg.sender , to, tokenId);

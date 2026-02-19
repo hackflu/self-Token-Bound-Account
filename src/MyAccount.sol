@@ -9,9 +9,8 @@ import {
 import {IERC6551Executable} from "./interface/IERC6551Executable.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
-contract Account is IERC165, IERC1271, IERC6551Account, IERC6551Executable {
+contract MyAccount is IERC165, IERC1271, IERC6551Account, IERC6551Executable {
     uint256 public state;
-    uint256 deploymentChainId = block.chainid;
 
     receive() external payable {}
 
@@ -19,7 +18,7 @@ contract Account is IERC165, IERC1271, IERC6551Account, IERC6551Executable {
         bytes memory footer = new bytes(0x60);
 
         assembly {
-            extcodecopy(address(), add(footer, 0x20), 0x4d, 0x60)
+            extcodecopy(address(), add(footer, 0x20), 0x2D, 0x60)
         }
 
         return abi.decode(footer, (uint256, address, uint256));
@@ -27,12 +26,15 @@ contract Account is IERC165, IERC1271, IERC6551Account, IERC6551Executable {
 
     function owner() public view virtual returns (address) {
         (uint256 chainId, address tokenContract, uint256 tokenId) = token();
-        if (chainId != deploymentChainId) return address(0);
+        if (chainId != block.chainid) return address(0);
 
         return IERC721(tokenContract).ownerOf(tokenId);
     }
-    
-    function isValidSigner(address signer, bytes calldata) external view virtual returns (bytes4) {
+
+    function isValidSigner(
+        address signer,
+        bytes calldata
+    ) external view virtual returns (bytes4) {
         if (_isValidSigner(signer)) {
             return IERC6551Account.isValidSigner.selector;
         }
@@ -86,7 +88,7 @@ contract Account is IERC165, IERC1271, IERC6551Account, IERC6551Executable {
         }
     }
 
-    function _isValidSigner(address addr) internal view  virtual returns (bool) {
-        return (addr == msg.sender);
+    function _isValidSigner(address addr) internal view virtual returns (bool) {
+        return (addr == owner());
     }
 }
